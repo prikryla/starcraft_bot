@@ -21,7 +21,7 @@ class WorkerRushBot(BotAI):
                 command_center.train(UnitTypeId.SCV)
 
             # Postav Supply Depot, jestliže zbývá méně než 6 supply a je využito více než 13
-            if self.supply_left < 6 and self.supply_used >= 14 and not self.already_pending(UnitTypeId.SUPPLYDEPOT):
+            if self.supply_left < 9 and self.supply_used >= 14 and not self.already_pending(UnitTypeId.SUPPLYDEPOT):
                 if self.can_afford(UnitTypeId.SUPPLYDEPOT):
                     # Budova bude postavena poblíž Command Center směrem ke středu mapy
                     # SCV pro stavbu bude vybráno automaticky viz dokumentace
@@ -43,6 +43,12 @@ class WorkerRushBot(BotAI):
                                 await self.build(
                                     UnitTypeId.REFINERY,
                                     vespene)
+                                                
+                for scv in self.workers.idle:
+                    for refinery in self.structures(UnitTypeId.REFINERY).ready:
+                        # Ensure that the worker is not already assigned to the refinery
+                        if scv.order_target != refinery.tag:
+                            scv.gather(refinery)
 
             # Stavba Barracks
             # Bot staví tak dlouho, dokud si může dovolit stavět Barracks a jejich počet je menší než 6
@@ -70,9 +76,6 @@ class WorkerRushBot(BotAI):
                 for marine in idle_marines:
                     marine.attack(target)
 
-            # Zbylý SCV bot pošle těžit minerály nejblíže Command Center
-            for scv in self.workers.idle:
-                scv.gather(self.mineral_field.closest_to(command_center))
 
 run_game(maps.get("sc2-ai-cup-2022"), [
     Bot(Race.Terran, WorkerRushBot()),
