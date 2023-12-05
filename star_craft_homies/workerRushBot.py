@@ -8,6 +8,10 @@ from sc2.ids.unit_typeid import UnitTypeId
 class WorkerRushBot(BotAI):
     NAME: str = "WorkerRushBot"
     RACE: Race = Race.Terran
+    
+    def __init__(self):
+        self.marine_barracks = set()
+        self.marauder_barracks = set()
 
     async def on_step(self, iteration: int):
         # Jestliže mám Command Center
@@ -83,17 +87,37 @@ class WorkerRushBot(BotAI):
             if self.tech_requirement_progress(UnitTypeId.BARRACKS) == 1:
                 # Je jich méně než 6 nebo se již nějaké nestaví
                 if self.structures(UnitTypeId.BARRACKS).amount < 6:
-                    if self.can_afford(UnitTypeId.BARRACKS) and not self.already_pending(UnitTypeId.BARRACKS):
-                        await self.build(
-                            UnitTypeId.BARRACKS,
-                            near=command_center.position.towards(self.game_info.map_center, 8))
+                # Loop through idle Barracks
+                    for barracks in self.structures(UnitTypeId.BARRACKS).ready.idle:
+                        # Check if the Barracks doesn't have an add-on (Tech Lab or Reactor)
+                        if barracks.add_on_tag == 0:
+                            # Check if you can afford a Tech Lab
+                            if self.can_afford(UnitTypeId.BARRACKSTECHLAB):
+                                # Build Tech Lab on the Barracks
+                                barracks.build(UnitTypeId.BARRACKSTECHLAB)
+                                # Add the Barracks to either the marine or marauder set
+                                if len(self.marine_barracks) <= len(self.marauder_barracks):
+                                    self.marine_barracks.add(barracks)
+                                else:
+                                    self.marauder_barracks.add(barracks)
+                                break  # Stop after upgrading one Barracks to Tech Lab
 
-            # Trénování jednotky Marine
-            # Pouze, má-li bot postavené Barracks a může si jednotku dovolit
-            if self.structures(UnitTypeId.BARRACKS) and self.can_afford(UnitTypeId.MARINE):
-                # Každá budova Barracks trénuje v jeden čas pouze jednu jednotku (úspora zdrojů)
-                for barrack in self.structures(UnitTypeId.BARRACKS).idle:
-                    barrack.train(UnitTypeId.MARINE)
+                    # If no Barracks without add-on is found, build a new Barracks
+                    else:
+                        if self.can_afford(UnitTypeId.BARRACKS) and not self.already_pending(UnitTypeId.BARRACKS):
+                            await self.build(
+                                UnitTypeId.BARRACKS,
+                                near=command_center.position.towards(self.game_info.map_center, 8))
+
+                # Train Marines and Marauders based on the assigned Barracks
+                if self.structures(UnitTypeId.BARRACKS).amount > 0 and self.can_afford(UnitTypeId.MARINE):
+                    for barracks in self.marine_barracks:
+                        barracks.train(UnitTypeId.MARINE)
+
+                if self.structures(UnitTypeId.BARRACKS).amount > 0 and self.can_afford(UnitTypeId.MARAUDER):
+                    for barracks in self.marauder_barracks:
+                        barracks.train(UnitTypeId.MARAUDER)
+
 
             # Útok s jednotkou Marine
             # Má-li bot více než 15 volných jednotek Marine, zaútočí na náhodnou nepřátelskou budovu nebo se přesune na jeho startovní pozici
@@ -102,6 +126,13 @@ class WorkerRushBot(BotAI):
                 target = self.enemy_structures.random_or(
                     self.enemy_start_locations[0]).position
                 for marine in idle_marines:
+                    marine.attack(target)
+            
+            idle_marauders = self.units(UnitTypeId.MARAUDER).idle
+            if idle_marauders.amount > 10:
+                target = self.enemy_structures.random_or(
+                    self.enemy_start_locations[0]).position
+                for marine in idle_marauders:
                     marine.attack(target)
            
 run_game(maps.get("sc2-ai-cup-2022"), [
