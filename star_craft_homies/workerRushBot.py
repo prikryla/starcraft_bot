@@ -80,8 +80,6 @@ class WorkerRushBot(BotAI):
                         worker = workers.pop(0)  # Take the first worker from the list
                         worker.gather(refinery)
 
-
-
             # Stavba Barracks
             # Bot staví tak dlouho, dokud si může dovolit stavět Barracks a jejich počet je menší než 6
             if self.tech_requirement_progress(UnitTypeId.BARRACKS) == 1:
@@ -96,10 +94,10 @@ class WorkerRushBot(BotAI):
                                 # Build Tech Lab on the Barracks
                                 barracks.build(UnitTypeId.BARRACKSTECHLAB)
                                 # Add the Barracks to either the marine or marauder set
-                                if len(self.marine_barracks) <= len(self.marauder_barracks):
-                                    self.marine_barracks.add(barracks)
-                                else:
+                                if len(self.marauder_barracks) <= len(self.marine_barracks):
                                     self.marauder_barracks.add(barracks)
+                                else:
+                                    self.marine_barracks.add(barracks)
                                 break  # Stop after upgrading one Barracks to Tech Lab
 
                     # If no Barracks without add-on is found, build a new Barracks
@@ -118,18 +116,17 @@ class WorkerRushBot(BotAI):
                     for barracks in self.marauder_barracks:
                         barracks.train(UnitTypeId.MARAUDER)
 
-
             # Útok s jednotkou Marine
             # Má-li bot více než 15 volných jednotek Marine, zaútočí na náhodnou nepřátelskou budovu nebo se přesune na jeho startovní pozici
             idle_marines = self.units(UnitTypeId.MARINE).idle
-            if idle_marines.amount > 15:
+            if idle_marines.amount > 10:
                 target = self.enemy_structures.random_or(
                     self.enemy_start_locations[0]).position
                 for marine in idle_marines:
                     marine.attack(target)
             
             idle_marauders = self.units(UnitTypeId.MARAUDER).idle
-            if idle_marauders.amount > 10:
+            if idle_marauders.amount > 7:
                 target = self.enemy_structures.random_or(
                     self.enemy_start_locations[0]).position
                 for marine in idle_marauders:
@@ -137,5 +134,5 @@ class WorkerRushBot(BotAI):
            
 run_game(maps.get("sc2-ai-cup-2022"), [
     Bot(Race.Terran, WorkerRushBot()),
-    Computer(Race.Terran, Difficulty.Medium)
+    Computer(Race.Terran, Difficulty.Hard)
 ], realtime=False)
