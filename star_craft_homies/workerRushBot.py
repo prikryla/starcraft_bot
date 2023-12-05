@@ -7,7 +7,11 @@ from sc2.ids.unit_typeid import UnitTypeId
  
 class WorkerRushBot(BotAI):
     NAME: str = "WorkerRushBot"
-    RACE: Race = Race.Terran  
+    RACE: Race = Race.Terran
+    
+    def __init__(self):
+        self.marine_barracks = set()
+        self.marauder_barracks = set()
  
     async def on_step(self, iteration: int):
             # Jestliže mám Command Center
