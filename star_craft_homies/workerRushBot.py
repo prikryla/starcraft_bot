@@ -7,10 +7,10 @@ from sc2.ids.unit_typeid import UnitTypeId
 
 class WorkerRushBot(BotAI):
     NAME: str = "WorkerRushBot"
-    RACE: Race = Race.Terran
+    RACE: Race = Race.Terran  
 
     async def on_step(self, iteration: int):
-        # Jestliže mám Command Center
+            # Jestliže mám Command Center
         if self.townhalls:
             # První Command Center
             command_center = self.townhalls[0]
@@ -21,7 +21,6 @@ class WorkerRushBot(BotAI):
                     if command_center.assigned_harvesters < 16:
                         # Trénuj SCV z konkrétního Command Centeru
                         command_center.train(UnitTypeId.SCV)
-                        print(f"Training SCV in Command Center {command_center.tag}")
 
             # Přiřadit pracovníky ke základnám
             await self.distribute_workers()
@@ -87,6 +86,24 @@ class WorkerRushBot(BotAI):
                         await self.build(
                             UnitTypeId.BARRACKS,
                             near=command_center.position.towards(self.game_info.map_center, 8))
+        # Stavba továrny (Factory)
+            if (
+                self.can_afford(UnitTypeId.FACTORY)
+                and not self.already_pending(UnitTypeId.FACTORY)
+                and self.structures(UnitTypeId.BARRACKS).amount >= 2  # Postav továrnu až po stavbě dvou Barracks
+            ):
+                build_location = await self.find_placement(UnitTypeId.FACTORY, near=command_center.position, placement_step=1)
+                await self.build(UnitTypeId.FACTORY, build_location)
+
+            # Trénování jednotky Hellion
+            if (
+                self.structures(UnitTypeId.FACTORY).ready
+                and self.can_afford(UnitTypeId.HELLION)
+                and self.units(UnitTypeId.FACTORY).idle
+            ):
+                for factory in self.structures(UnitTypeId.FACTORY).idle:
+                    factory.train(UnitTypeId.HELLION)
+    
 
             # Trénování jednotky Marine
             # Pouze, má-li bot postavené Barracks a může si jednotku dovolit
@@ -106,5 +123,5 @@ class WorkerRushBot(BotAI):
            
 run_game(maps.get("sc2-ai-cup-2022"), [
     Bot(Race.Terran, WorkerRushBot()),
-    Computer(Race.Terran, Difficulty.Medium)
+    Computer(Race.Terran, Difficulty.Hard)
 ], realtime=False)
