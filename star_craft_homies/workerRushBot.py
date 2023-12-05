@@ -7,14 +7,10 @@ from sc2.ids.unit_typeid import UnitTypeId
 
 class WorkerRushBot(BotAI):
     NAME: str = "WorkerRushBot"
-    RACE: Race = Race.Terran
-    
-    def __init__(self):
-        self.marine_barracks = set()
-        self.marauder_barracks = set()
+    RACE: Race = Race.Terran  
 
     async def on_step(self, iteration: int):
-        # Jestliže mám Command Center
+            # Jestliže mám Command Center
         if self.townhalls:
             # První Command Center
             command_center = self.townhalls[0]
@@ -25,7 +21,6 @@ class WorkerRushBot(BotAI):
                     if command_center.assigned_harvesters < 16:
                         # Trénuj SCV z konkrétního Command Centeru
                         command_center.train(UnitTypeId.SCV)
-                        print(f"Training SCV in Command Center {command_center.tag}")
 
             # Přiřadit pracovníky ke základnám
             await self.distribute_workers()
@@ -99,22 +94,28 @@ class WorkerRushBot(BotAI):
                                 else:
                                     self.marine_barracks.add(barracks)
                                 break  # Stop after upgrading one Barracks to Tech Lab
+                    if self.can_afford(UnitTypeId.BARRACKS) and not self.already_pending(UnitTypeId.BARRACKS):
+                        await self.build(
+                            UnitTypeId.BARRACKS,
+                            near=command_center.position.towards(self.game_info.map_center, 8))
+        # Stavba továrny (Factory)
+            if (
+                self.can_afford(UnitTypeId.FACTORY)
+                and not self.already_pending(UnitTypeId.FACTORY)
+                and self.structures(UnitTypeId.BARRACKS).amount >= 2  # Postav továrnu až po stavbě dvou Barracks
+            ):
+                build_location = await self.find_placement(UnitTypeId.FACTORY, near=command_center.position, placement_step=1)
+                await self.build(UnitTypeId.FACTORY, build_location)
 
-                    # If no Barracks without add-on is found, build a new Barracks
-                    else:
-                        if self.can_afford(UnitTypeId.BARRACKS) and not self.already_pending(UnitTypeId.BARRACKS):
-                            await self.build(
-                                UnitTypeId.BARRACKS,
-                                near=command_center.position.towards(self.game_info.map_center, 8))
-
-                # Train Marines and Marauders based on the assigned Barracks
-                if self.structures(UnitTypeId.BARRACKS).amount > 0 and self.can_afford(UnitTypeId.MARINE):
-                    for barracks in self.marine_barracks:
-                        barracks.train(UnitTypeId.MARINE)
-
-                if self.structures(UnitTypeId.BARRACKS).amount > 0 and self.can_afford(UnitTypeId.MARAUDER):
-                    for barracks in self.marauder_barracks:
-                        barracks.train(UnitTypeId.MARAUDER)
+            # Trénování jednotky Hellion
+            if (
+                self.structures(UnitTypeId.FACTORY).ready
+                and self.can_afford(UnitTypeId.HELLION)
+                and self.units(UnitTypeId.FACTORY).idle
+            ):
+                for factory in self.structures(UnitTypeId.FACTORY).idle:
+                    factory.train(UnitTypeId.HELLION)
+    
 
             # Útok s jednotkou Marine
             # Má-li bot více než 15 volných jednotek Marine, zaútočí na náhodnou nepřátelskou budovu nebo se přesune na jeho startovní pozici
