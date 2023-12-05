@@ -28,6 +28,21 @@ class WorkerRushBot(BotAI):
                     await self.build(
                         UnitTypeId.SUPPLYDEPOT,
                         near=command_center.position.towards(self.game_info.map_center, 8))
+                    
+            # # Stavba Refinery
+            # # Bot staví tak dlouho, dokud si může dovolit stavět Refinery a jejich počet je menší než 2
+            if self.already_pending(UnitTypeId.REFINERY) == 0:
+                # Je jich méně než 2 nebo se již nějaké nestaví
+                if self.structures(UnitTypeId.REFINERY).amount < 2:
+                    # Najdi blízký vespene geyser, který ještě nemá postavenou rafinérii
+                    vespene_geyser = self.vespene_geyser.closer_than(10, command_center)
+                    for vespene in vespene_geyser:
+                        if not self.structures(UnitTypeId.REFINERY).closer_than(1, vespene):
+                            if self.can_afford(UnitTypeId.REFINERY) and not self.already_pending(UnitTypeId.REFINERY):
+                                # Budova bude postavena poblíž vespene geyseru
+                                await self.build(
+                                    UnitTypeId.REFINERY,
+                                    vespene)
 
             # Stavba Barracks
             # Bot staví tak dlouho, dokud si může dovolit stavět Barracks a jejich počet je menší než 6
@@ -62,4 +77,4 @@ class WorkerRushBot(BotAI):
 run_game(maps.get("sc2-ai-cup-2022"), [
     Bot(Race.Terran, WorkerRushBot()),
     Computer(Race.Terran, Difficulty.Medium)
-], realtime=True)
+], realtime=False)
