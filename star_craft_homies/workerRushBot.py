@@ -15,10 +15,23 @@ class WorkerRushBot(BotAI):
             # První Command Center
             command_center = self.townhalls[0]
 
-            # Trénování SCV
-            # Bot trénuje nová SCV, jestliže je jich méně než 17
-            if self.can_afford(UnitTypeId.SCV) and self.supply_workers <= 25 and command_center.is_idle:
-                command_center.train(UnitTypeId.SCV)
+            # Trénování SCV v každém Command Centeru, dokud máte méně než 16 pracovníků na každé základně
+            if self.can_afford(UnitTypeId.SCV):
+                for command_center in self.townhalls.idle:
+                    if command_center.assigned_harvesters < 16:
+                        # Trénuj SCV z konkrétního Command Centeru
+                        command_center.train(UnitTypeId.SCV)
+                        print(f"Training SCV in Command Center {command_center.tag}")
+
+            # Přiřadit pracovníky ke základnám
+            await self.distribute_workers()
+
+            # Stavba dalšího Command Centeru
+            # Bot postaví další Command Center, pokud má dostatek prostředků
+            if self.townhalls.amount < 2 and self.can_afford(UnitTypeId.COMMANDCENTER):
+                # Další Command Center bude postaveno poblíž existujících budov
+                await self.expand_now(UnitTypeId.COMMANDCENTER)
+
 
             # Postav Supply Depot, jestliže zbývá méně než 6 supply a je využito více než 13
             if self.supply_left < 9 and self.supply_used >= 14 and not self.already_pending(UnitTypeId.SUPPLYDEPOT):
@@ -87,8 +100,7 @@ class WorkerRushBot(BotAI):
                     self.enemy_start_locations[0]).position
                 for marine in idle_marines:
                     marine.attack(target)
-
-
+           
 run_game(maps.get("sc2-ai-cup-2022"), [
     Bot(Race.Terran, WorkerRushBot()),
     Computer(Race.Terran, Difficulty.Medium)
