@@ -41,12 +41,15 @@ class WorkerRushBot(BotAI):
                     await self.build(
                         UnitTypeId.SUPPLYDEPOT,
                         near=command_center.position.towards(self.game_info.map_center, 8))
-                    
+                                
             # Stavba Refinery
-            # Bot staví tak dlouho, dokud si může dovolit stavět Refinery a jejich počet je menší než 2
-            if self.already_pending(UnitTypeId.REFINERY) == 0:
-                # Je jich méně než 2 nebo se již nějaké nestaví
-                if self.structures(UnitTypeId.REFINERY).amount < 2:
+            # Bot staví tak dlouho, dokud si může dovolit stavět Refinery a jejich počet je menší než 2 pro každou základnu
+            for command_center in self.townhalls:
+                # Zkontrolovat, kolik rafinérií je postaveno u každé základny
+                refineries_built = self.structures(UnitTypeId.REFINERY).closer_than(1, command_center)
+                
+                # Pokud je méně než 2 rafinérií, postav další
+                if len(refineries_built) < 2:
                     # Najdi blízký vespene geyser, který ještě nemá postavenou rafinérii
                     vespene_geysers = self.vespene_geyser.closer_than(10, command_center)
                     for vespene in vespene_geysers:
