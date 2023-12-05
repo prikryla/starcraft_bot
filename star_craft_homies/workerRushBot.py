@@ -4,6 +4,8 @@ from sc2.main import run_game
 from sc2.data import Race, Difficulty
 from sc2.bot_ai import BotAI
 from sc2.ids.unit_typeid import UnitTypeId
+from sc2.ids.buff_id import BuffId
+
  
 class WorkerRushBot(BotAI):
     NAME: str = "WorkerRushBot"
@@ -25,15 +27,21 @@ class WorkerRushBot(BotAI):
                     if command_center.assigned_harvesters < 16:
                         # Trénuj SCV z konkrétního Command Centeru
                         command_center.train(UnitTypeId.SCV)
+            # Upgrading Command Center to Orbital Command
+            for command_center in self.townhalls:
+                # Check if you can upgrade Command Center to Orbital Command
+                if (
+                    self.can_afford(UnitTypeId.ORBITALCOMMAND)
+                    and command_center.is_idle
+                ):
+                    # Upgrade Command Center to Orbital Command
+                    self.do(command_center.build(UnitTypeId.ORBITALCOMMAND))
+
+
  
             # Přiřadit pracovníky ke základnám
             await self.distribute_workers()
  
-            # Stavba dalšího Command Centeru
-            # Bot postaví další Command Center, pokud má dostatek prostředků
-            if self.townhalls.amount < 2 and self.can_afford(UnitTypeId.COMMANDCENTER):
-                # Další Command Center bude postaveno poblíž existujících budov
-                await self.expand_now(UnitTypeId.COMMANDCENTER)
  
  
             # Postav Supply Depot, jestliže zbývá méně než 6 supply a je využito více než 13
