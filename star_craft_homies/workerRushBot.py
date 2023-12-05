@@ -29,26 +29,38 @@ class WorkerRushBot(BotAI):
                         UnitTypeId.SUPPLYDEPOT,
                         near=command_center.position.towards(self.game_info.map_center, 8))
                     
-            # # Stavba Refinery
-            # # Bot staví tak dlouho, dokud si může dovolit stavět Refinery a jejich počet je menší než 2
+            # Stavba Refinery
+            # Bot staví tak dlouho, dokud si může dovolit stavět Refinery a jejich počet je menší než 2
             if self.already_pending(UnitTypeId.REFINERY) == 0:
                 # Je jich méně než 2 nebo se již nějaké nestaví
                 if self.structures(UnitTypeId.REFINERY).amount < 2:
                     # Najdi blízký vespene geyser, který ještě nemá postavenou rafinérii
-                    vespene_geyser = self.vespene_geyser.closer_than(10, command_center)
-                    for vespene in vespene_geyser:
+                    vespene_geysers = self.vespene_geyser.closer_than(10, command_center)
+                    for vespene in vespene_geysers:
                         if not self.structures(UnitTypeId.REFINERY).closer_than(1, vespene):
                             if self.can_afford(UnitTypeId.REFINERY) and not self.already_pending(UnitTypeId.REFINERY):
                                 # Budova bude postavena poblíž vespene geyseru
                                 await self.build(
                                     UnitTypeId.REFINERY,
                                     vespene)
-                                                
-                for scv in self.workers.idle:
-                    for refinery in self.structures(UnitTypeId.REFINERY).ready:
-                        # Ensure that the worker is not already assigned to the refinery
-                        if scv.order_target != refinery.tag:
-                            scv.gather(refinery)
+
+            # Distribute workers evenly among refineries
+            refineries = self.structures(UnitTypeId.REFINERY).ready
+            workers = self.workers.idle
+
+            # Dictionary to keep track of assigned workers for each refinery
+            assigned_workers_count = {refinery.tag: 0 for refinery in refineries}
+
+            for worker in workers:
+                # Find the refinery with the least assigned workers
+                refinery_with_least_workers = min(refineries, key=lambda r: assigned_workers_count[r.tag])
+                
+                # Assign the worker to the refinery
+                worker.gather(refinery_with_least_workers)
+                
+                # Update the count of assigned workers for the selected refinery
+                assigned_workers_count[refinery_with_least_workers.tag] += 1
+
 
             # Stavba Barracks
             # Bot staví tak dlouho, dokud si může dovolit stavět Barracks a jejich počet je menší než 6
