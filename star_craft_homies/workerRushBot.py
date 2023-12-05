@@ -17,7 +17,7 @@ class WorkerRushBot(BotAI):
 
             # Trénování SCV
             # Bot trénuje nová SCV, jestliže je jich méně než 17
-            if self.can_afford(UnitTypeId.SCV) and self.supply_workers <= 16 and command_center.is_idle:
+            if self.can_afford(UnitTypeId.SCV) and self.supply_workers <= 25 and command_center.is_idle:
                 command_center.train(UnitTypeId.SCV)
 
             # Postav Supply Depot, jestliže zbývá méně než 6 supply a je využito více než 13
@@ -48,18 +48,18 @@ class WorkerRushBot(BotAI):
             refineries = self.structures(UnitTypeId.REFINERY).ready
             workers = self.workers.idle
 
-            # Dictionary to keep track of assigned workers for each refinery
-            assigned_workers_count = {refinery.tag: 0 for refinery in refineries}
+            # Ensure that each refinery has exactly 3 workers
+            desired_workers_per_refinery = 3
 
-            for worker in workers:
-                # Find the refinery with the least assigned workers
-                refinery_with_least_workers = min(refineries, key=lambda r: assigned_workers_count[r.tag])
-                
-                # Assign the worker to the refinery
-                worker.gather(refinery_with_least_workers)
-                
-                # Update the count of assigned workers for the selected refinery
-                assigned_workers_count[refinery_with_least_workers.tag] += 1
+            for refinery in refineries:
+                # Check if the refinery already has the desired number of workers
+                if refinery.assigned_harvesters < desired_workers_per_refinery:
+                    # Assign workers to the refinery up to the desired count
+                    workers_to_assign = min(desired_workers_per_refinery - refinery.assigned_harvesters, len(workers))
+                    for _ in range(workers_to_assign):
+                        worker = workers.pop(0)  # Take the first worker from the list
+                        worker.gather(refinery)
+
 
 
             # Stavba Barracks
