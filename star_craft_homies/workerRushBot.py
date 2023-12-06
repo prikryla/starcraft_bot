@@ -97,25 +97,7 @@ class WorkerRushBot(BotAI):
                     if self.can_afford(UnitTypeId.BARRACKS) and not self.already_pending(UnitTypeId.BARRACKS):
                         await self.build(
                             UnitTypeId.BARRACKS,
-                            near=command_center.position.towards(self.game_info.map_center, 8))
-        # Stavba továrny (Factory)
-            if (
-                self.can_afford(UnitTypeId.FACTORY)
-                and not self.already_pending(UnitTypeId.FACTORY)
-                and self.structures(UnitTypeId.BARRACKS).amount >= 2  # Postav továrnu až po stavbě dvou Barracks
-            ):
-                build_location = await self.find_placement(UnitTypeId.FACTORY, near=command_center.position, placement_step=1)
-                await self.build(UnitTypeId.FACTORY, build_location)
- 
-            # Trénování jednotky Hellion
-            if (
-                self.structures(UnitTypeId.FACTORY).ready
-                and self.can_afford(UnitTypeId.HELLION)
-                and self.units(UnitTypeId.FACTORY).idle
-            ):
-                for factory in self.structures(UnitTypeId.FACTORY).idle:
-                    factory.train(UnitTypeId.HELLION)
-   
+                            near=command_center.position.towards(self.game_info.map_center, 8))   
  
             # Trénování jednotky Marine
             # Pouze, má-li bot postavené Barracks a může si jednotku dovolit
@@ -132,6 +114,32 @@ class WorkerRushBot(BotAI):
                     self.enemy_start_locations[0]).position
                 for marine in idle_marines:
                     marine.attack(target)
+                    # Stavba Factory
+            # Bot staví tak dlouho, dokud si může dovolit stavět Factory a jejich počet je menší než 2
+            if self.tech_requirement_progress(UnitTypeId.FACTORY) == 1:
+                # Je jich méně než 2 nebo se již nějaké nestaví
+                if self.structures(UnitTypeId.FACTORY).amount < 2:
+                    if self.can_afford(UnitTypeId.FACTORY) and not self.already_pending(UnitTypeId.FACTORY):
+                        await self.build(
+                            UnitTypeId.FACTORY,
+                            near=command_center.position.towards(self.game_info.map_center, 8))
+
+            # Trénování jednotky Hellion z Factory
+            # Pouze, má-li bot postavené Factory a může si jednotku dovolit
+            if self.structures(UnitTypeId.FACTORY) and self.can_afford(UnitTypeId.HELLION):
+                # Každá budova Factory trénuje v jeden čas pouze jednu jednotku (úspora zdrojů)
+                for factory in self.structures(UnitTypeId.FACTORY).idle:
+                    factory.train(UnitTypeId.HELLION)
+                    print('Make helion')
+
+            # Útok s jednotkou Hellion
+            # Má-li bot více než 10 volných jednotek Hellion, zaútočí na náhodnou nepřátelskou budovu nebo se přesune na jeho startovní pozici
+            idle_hellions = self.units(UnitTypeId.HELLION).idle
+            if idle_hellions.amount > 10:
+                target = self.enemy_structures.random_or(self.enemy_start_locations[0]).position
+                for hellion in idle_hellions:
+                    hellion.attack(target)
+                    print('attack with helion')
            
 run_game(maps.get("sc2-ai-cup-2022"), [
     Bot(Race.Terran, WorkerRushBot()),
