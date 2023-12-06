@@ -4,7 +4,6 @@ from sc2.main import run_game
 from sc2.data import Race, Difficulty
 from sc2.bot_ai import BotAI
 from sc2.ids.unit_typeid import UnitTypeId
-from sc2.ids.buff_id import BuffId
 
 class WorkerRushBot(BotAI):
     NAME: str = "WorkerRushBot"
@@ -25,6 +24,7 @@ class WorkerRushBot(BotAI):
             # Bot trénuje nová SCV, jestliže je jich méně než 17
             if self.can_afford(UnitTypeId.SCV) and self.supply_workers <= 16 and command_center.is_idle:
                 command_center.train(UnitTypeId.SCV)
+                
             # Upgrade Command center na Orbital Command
             for command_center in self.townhalls:
                 # Kontrola, zda je možné postavit Orbital Command z Command Center 
@@ -88,7 +88,8 @@ class WorkerRushBot(BotAI):
                     self.enemy_start_locations[0]).position
                 for marine in idle_marines:
                     marine.attack(target)
-                    # Stavba Factory
+            
+            # Stavba Factory
             # Bot staví tak dlouho, dokud si může dovolit stavět Factory a jejich počet je menší než 2
             if self.tech_requirement_progress(UnitTypeId.FACTORY) == 1:
                 # Je jich méně než 2 nebo se již nějaké nestaví
@@ -97,15 +98,33 @@ class WorkerRushBot(BotAI):
                         await self.build(
                             UnitTypeId.FACTORY,
                             near=command_center.position.towards(self.game_info.map_center, 8))
+            
+            # Stavba Starportu
+            # Bot staví tak dlouho, dokud si může dovolit stavět Starport a jejich počet je menší než 2
+            if self.tech_requirement_progress(UnitTypeId.STARPORT) == 1:
+                # Je jich méně než 2 nebo se již nějaké nestaví
+                if self.structures(UnitTypeId.STARPORT).amount < 2:
+                    if self.can_afford(UnitTypeId.STARPORT) and not self.already_pending(UnitTypeId.STARPORT):
+                        await self.build(
+                            UnitTypeId.STARPORT,
+                            near=command_center.position.towards(self.game_info.map_center, 8))
 
             # Trénování jednotky Hellion z Factory
             # Pouze, má-li bot postavené Factory a může si jednotku dovolit
-            if self.structures(UnitTypeId.FACTORY) and self.can_afford(UnitTypeId.HELLION):
+            if self.structures(UnitTypeId.FACTORY) and self.can_afford(UnitTypeId.HELLION) and self.units(UnitTypeId.HELLION).amount < 6:
                 # Každá budova Factory trénuje v jeden čas pouze jednu jednotku (úspora zdrojů)
                 for factory in self.structures(UnitTypeId.FACTORY).idle:
                     factory.train(UnitTypeId.HELLION)
                     print('Make helion')
-
+                    
+            # Trénování jednotky Medivac z Factory
+            # Pouze, má-li bot postavené Starporty a může si jednotku dovolit
+            if self.structures(UnitTypeId.STARPORT) and self.can_afford(UnitTypeId.MEDIVAC):
+                # Každá budova Starport trénuje v jeden čas pouze jednu jednotku (úspora zdrojů)
+                for starport in self.structures(UnitTypeId.STARPORT).idle:
+                    starport.train(UnitTypeId.MEDIVAC)
+                    print('Make Medivac')
+            
             # Útok s jednotkou Hellion
             # Má-li bot více než 10 volných jednotek Hellion, zaútočí na náhodnou nepřátelskou budovu nebo se přesune na jeho startovní pozici
             idle_hellions = self.units(UnitTypeId.HELLION).idle
