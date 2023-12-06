@@ -21,12 +21,10 @@ class WorkerRushBot(BotAI):
             # První Command Center
             command_center = self.townhalls[0]
  
-            # Trénování SCV v každém Command Centeru, dokud máte méně než 16 pracovníků na každé základně
-            if self.can_afford(UnitTypeId.SCV):
-                for command_center in self.townhalls.idle:
-                    if command_center.assigned_harvesters < 16:
-                        # Trénuj SCV z konkrétního Command Centeru
-                        command_center.train(UnitTypeId.SCV)
+            # Trénování SCV
+            # Bot trénuje nová SCV, jestliže je jich méně než 17
+            if self.can_afford(UnitTypeId.SCV) and self.supply_workers <= 16 and command_center.is_idle:
+                command_center.train(UnitTypeId.SCV)
             # Upgrading Command Center to Orbital Command
             for command_center in self.townhalls:
                 # Check if you can upgrade Command Center to Orbital Command
@@ -39,8 +37,6 @@ class WorkerRushBot(BotAI):
 
 
  
-            # Přiřadit pracovníky ke základnám
-            await self.distribute_workers()
  
  
  
@@ -70,24 +66,12 @@ class WorkerRushBot(BotAI):
                                 await self.build(
                                     UnitTypeId.REFINERY,
                                     vespene)
- 
-            # Distribute workers evenly among refineries
-            refineries = self.structures(UnitTypeId.REFINERY).ready
-            workers = self.workers.idle
- 
-            # Ensure that each refinery has exactly 3 workers
-            desired_workers_per_refinery = 3
- 
-            for refinery in refineries:
-                # Check if the refinery already has the desired number of workers
-                if refinery.assigned_harvesters < desired_workers_per_refinery:
-                    # Assign workers to the refinery up to the desired count
-                    workers_to_assign = min(desired_workers_per_refinery - refinery.assigned_harvesters, len(workers))
-                    for _ in range(workers_to_assign):
-                        worker = workers.pop(0)  # Take the first worker from the list
-                        worker.gather(refinery)
- 
- 
+
+
+# Zbylý SCV bot pošle těžit minerály nejblíže Command Center
+            for scv in self.workers.idle:
+                scv.gather(self.mineral_field.closest_to(command_center))
+            
  
             # Stavba Barracks
             # Bot staví tak dlouho, dokud si může dovolit stavět Barracks a jejich počet je menší než 6
