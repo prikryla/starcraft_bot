@@ -6,7 +6,6 @@ from sc2.bot_ai import BotAI
 from sc2.ids.unit_typeid import UnitTypeId
 from sc2.ids.buff_id import BuffId
 
- 
 class WorkerRushBot(BotAI):
     NAME: str = "WorkerRushBot"
     RACE: Race = Race.Terran
@@ -16,7 +15,8 @@ class WorkerRushBot(BotAI):
         self.marauder_barracks = set()
  
     async def on_step(self, iteration: int):
-            # Jestliže mám Command Center
+        
+        # Jestliže mám Command Center
         if self.townhalls:
             # První Command Center
             command_center = self.townhalls[0]
@@ -25,21 +25,13 @@ class WorkerRushBot(BotAI):
             # Bot trénuje nová SCV, jestliže je jich méně než 17
             if self.can_afford(UnitTypeId.SCV) and self.supply_workers <= 16 and command_center.is_idle:
                 command_center.train(UnitTypeId.SCV)
-            # Upgrading Command Center to Orbital Command
+            # Upgrade Command center na Orbital Command
             for command_center in self.townhalls:
-                # Check if you can upgrade Command Center to Orbital Command
-                if (
-                    self.can_afford(UnitTypeId.ORBITALCOMMAND)
-                    and command_center.is_idle
-                ):
-                    # Upgrade Command Center to Orbital Command
+                # Kontrola, zda je možné postavit Orbital Command z Command Center 
+                if (self.can_afford(UnitTypeId.ORBITALCOMMAND) and command_center.is_idle):
+                    # Pokud mame dost surovin, postav Orbital Commands
                     self.do(command_center.build(UnitTypeId.ORBITALCOMMAND))
 
-
- 
- 
- 
- 
             # Postav Supply Depot, jestliže zbývá méně než 6 supply a je využito více než 13
             if self.supply_left < 9 and self.supply_used >= 14 and not self.already_pending(UnitTypeId.SUPPLYDEPOT):
                 if self.can_afford(UnitTypeId.SUPPLYDEPOT):
@@ -67,12 +59,10 @@ class WorkerRushBot(BotAI):
                                     UnitTypeId.REFINERY,
                                     vespene)
 
-
-# Zbylý SCV bot pošle těžit minerály nejblíže Command Center
+            # Zbylý SCV bot pošle těžit minerály nejblíže Command Center
             for scv in self.workers.idle:
                 scv.gather(self.mineral_field.closest_to(command_center))
             
- 
             # Stavba Barracks
             # Bot staví tak dlouho, dokud si může dovolit stavět Barracks a jejich počet je menší než 6
             if self.tech_requirement_progress(UnitTypeId.BARRACKS) == 1:
